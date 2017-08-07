@@ -13,21 +13,10 @@ import java.util.Map;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ActionData extends Object implements Serializable {
+public class DialogData implements Serializable {
 
-    private long id;
-
-    private long timeStamp;
-    private int serialIndex;
     private int tenantId;
     private String robotId;
     private String content;
     private Map<String, Object> attrs;
-
-    public boolean equals(Object obj) {
-        if (obj == null || !(obj instanceof ActionData)) {
-            return false;
-        }
-        return this.id == ((ActionData) obj).getId();
-    }
 }
