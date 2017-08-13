@@ -1,6 +1,10 @@
-package task;
+package dialog;
 
 import data.DialogData;
+import dialog.tools.JsonDeserializer;
+import dialog.tools.JsonSerializer;
+import dialog.tools.KafkaPropertiesConfigure;
+import dialog.tools.MsgProcessorSupplier;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.serialization.DoubleDeserializer;
 import org.apache.kafka.common.serialization.DoubleSerializer;
@@ -15,10 +19,6 @@ import org.apache.kafka.streams.kstream.internals.KStreamReduce;
 import org.apache.kafka.streams.kstream.internals.KStreamWindowReduce;
 import org.apache.kafka.streams.processor.TopologyBuilder;
 import org.apache.kafka.streams.state.Stores;
-import task.tools.JsonDeserializer;
-import task.tools.JsonSerializer;
-import task.tools.KafkaPropertiesConfigure;
-import task.tools.MsgProcessorSupplier;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -38,7 +38,7 @@ public class DialogListener implements Runnable {
         TopologyBuilder topologyBuilder = new TopologyBuilder();
         topologyBuilder.addSource("dialogSource", new LongDeserializer(), dialogDataSerde.deserializer(), "dialog")
                 .addProcessor("msgProcessor", new MsgProcessorSupplier(), "dialogSource")
-                .addProcessor("emptyProcessor", new MsgProcessorSupplier(), "dialogSource")
+                .addProcessor("emptyProcessor", new MsgProcessorSupplier(true), "dialogSource")
                 .addGlobalStore(Stores.create("dialogHistory").withStringKeys().withValues(ArrayList.class).persistent().windowed(100, 30 * 24 * 3600, 1, true).enableCaching().build().get(),
                         "dialogSource", new StringDeserializer(), new JsonDeserializer<>(ArrayList.class), "dialog", "msgProcessor",
                         new KStreamWindowReduce(TimeWindows.of(MsgProcessorSupplier.getWindowSize()), "dialogHistory", (dialogDataList1, dialogDataList2) -> new ArrayList<DialogData>() {{

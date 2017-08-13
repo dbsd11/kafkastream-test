@@ -1,7 +1,9 @@
-package task.tools;
+package dialog.tools;
 
 import data.ActionData;
 import data.DialogData;
+import data.ResponseData;
+import flow.DialogFlowProcessor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.streams.processor.AbstractProcessor;
 import org.apache.kafka.streams.processor.Processor;
@@ -9,6 +11,8 @@ import org.apache.kafka.streams.processor.ProcessorContext;
 import org.apache.kafka.streams.processor.ProcessorSupplier;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.WindowStore;
+import util.BeanDelegator;
+import util.Constants;
 
 import java.util.Base64;
 import java.util.Collections;
@@ -21,8 +25,6 @@ import java.util.List;
 public class MsgProcessorSupplier implements ProcessorSupplier {
 
     private boolean formless;
-
-    private static long windowSize = 30 * 24 * 3600;
 
     public MsgProcessorSupplier() {
         this(false);
@@ -39,10 +41,12 @@ public class MsgProcessorSupplier implements ProcessorSupplier {
 
     public static long getWindowSize() {
 
-        return windowSize;
+        return Constants.HISTORY_WINDOWSIZE;
     }
 
     public static class DialogMsgProcessor extends AbstractProcessor<Long, DialogData> {
+
+        private DialogFlowProcessor dialogFlowProcessor;
 
         private WindowStore<String, List<ActionData>> dialogHistoryStore;
         private KeyValueStore<String, Double> dialogStatisticStore;
@@ -68,7 +72,14 @@ public class MsgProcessorSupplier implements ProcessorSupplier {
             String key = getKey(dialogData);
             ActionData actionData = new ActionData();
             try {
-                //todo process message
+                actionData.setId(dialogStatisticStore.get(getDialogCountKey(dialogData)).intValue());
+                actionData.setTenantId(dialogData.getTenantId());
+                actionData.setRobotId(dialogData.getRobotId());
+                actionData.setContent(dialogData.getContent());
+                actionData.setTimeStamp(context.timestamp());
+                //todo worker
+                ResponseData responseData = dialogFlowProcessor.process(actionData);
+                callBack(responseData);
             } catch (Exception e) {
                 log.error(e.getMessage(), e);
             } finally {
@@ -84,6 +95,8 @@ public class MsgProcessorSupplier implements ProcessorSupplier {
                 }
                 dialogCountValue += 1;
                 dialogStatisticStore.put(dialogCountKey, dialogCountValue);
+
+                dialogStatisticStore.put(getDialogLastTimeKey(dialogData), (double) actionData.getTimeStamp());
             }
         }
 
@@ -93,12 +106,18 @@ public class MsgProcessorSupplier implements ProcessorSupplier {
             this.context = context;
             this.dialogHistoryStore = (WindowStore<String, List<ActionData>>) this.context.getStateStore("dialogHistory");
             this.dialogStatisticStore = (KeyValueStore<String, Double>) this.context.getStateStore("dialogStatistic");
+            BeanDelegator.delegate(dialogHistoryStore);
+            BeanDelegator.delegate(dialogStatisticStore);
         }
 
         @Override
         public void punctuate(long timestamp) {
             super.punctuate(timestamp);
             log.info("call dialog msg processor punctuate method");
+        }
+
+        static void callBack(ResponseData responseData) {
+            log.info("response data:" + responseData);
         }
 
         String getKey(DialogData dialogData) {
@@ -109,6 +128,11 @@ public class MsgProcessorSupplier implements ProcessorSupplier {
         String getDialogCountKey(DialogData dialogData) {
 
             return String.valueOf(Base64.getEncoder().encode(String.join("_", String.valueOf(dialogData.getTenantId()), dialogData.getRobotId(), "dialogcount").getBytes()));
+        }
+
+        String getDialogLastTimeKey(DialogData dialogData) {
+
+            return String.valueOf(Base64.getEncoder().encode(String.join("_", String.valueOf(dialogData.getTenantId()), dialogData.getRobotId(), "dialoglasttime").getBytes()));
         }
     }
 }

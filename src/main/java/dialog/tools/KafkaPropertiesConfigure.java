@@ -1,4 +1,4 @@
-package task.tools;
+package dialog.tools;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;

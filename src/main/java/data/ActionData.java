@@ -5,7 +5,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
-import java.util.Map;
 
 /**
  * Created by BSONG on 2017/6/18.
@@ -13,7 +12,7 @@ import java.util.Map;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ActionData extends Object implements Serializable {
+public class ActionData implements Serializable {
 
     private long id;
 
@@ -22,7 +21,8 @@ public class ActionData extends Object implements Serializable {
     private int tenantId;
     private String robotId;
     private String content;
-    private Map<String, Object> attrs;
+
+    private ResponseData response;
 
     public boolean equals(Object obj) {
         if (obj == null || !(obj instanceof ActionData)) {

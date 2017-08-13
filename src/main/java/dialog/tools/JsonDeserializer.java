@@ -1,4 +1,4 @@
-package task.tools;
+package dialog.tools;
 
 import com.google.gson.Gson;
 import org.apache.kafka.common.serialization.Deserializer;

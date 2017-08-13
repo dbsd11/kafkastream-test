@@ -1,7 +1,10 @@
 package data;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import util.PropsWarper;
 
 import java.io.Serializable;
 import java.util.HashMap;
@@ -10,27 +13,17 @@ import java.util.Map;
 /**
  * Created by BSONG on 2017/6/18.
  */
+@Builder
 @Getter
 @NoArgsConstructor
-public class ResponseData implements Serializable {
+@AllArgsConstructor
+public class ResponseData extends PropsWarper implements Serializable {
     private static final long serialVersionUID = -1L;
 
-    private Map<String, Object> props = new HashMap<>();
-
-    public ResponseData props(Map<String, Object> props) {
-        if (props == null) {
-            return this;
-        }
-        this.props.putAll(props);
-        return this;
-    }
-
-    public ResponseData put(String key, Object value) {
-        this.props.put(key, value);
-        return this;
-    }
-
-    public Object get(String key) {
-        return props.get(key);
-    }
+    private long actionId;
+    private String actionContent;
+    private int tenantId;
+    private String robotId;
+    private long timestamp;
+    private Object response;
 }
