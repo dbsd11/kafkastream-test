@@ -32,6 +32,9 @@ abstract class TreeNode implements Node {
 
 public abstract class NodeImpl extends TreeNode {
 
+    protected NodeImpl() {
+    }
+
     @Override
     public Node[] relates() {
         return super.childs();

@@ -1,13 +1,15 @@
 package data.domain;
 
+import com.mongodb.Block;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Aggregates;
 import com.mongodb.client.model.Filters;
-import com.mongodb.client.model.InsertOneOptions;
 import model.DomainModel;
+import model.Model;
 import model.impl.CommonDomainModel;
 import model.node.DomainNode;
-import model.node.mongo.IMongoTemplate;
+import model.node.mongo.IMongoCollection;
+import model.node.mongo.IMongoDocument;
 import model.node.mongo.MongoUtil;
 import model.tool.ModelLoader;
 import model.tool.ModelPluginer;
@@ -25,25 +27,21 @@ public class DemoTrainer {
     private static final Logger LOG = LoggerFactory.getLogger(DemoTrainer.class);
 
     final static void buildDefault() {
-        MongoCollection<IMongoTemplate> nodeCollection = MongoUtil.getDB("dialog").getCollection("model_node", IMongoTemplate.class);
-
         DomainNode rootNode = new DomainNode();
         rootNode.setName("root");
         rootNode.setModel(new DefaultDomainModel());
-
-        nodeCollection.insertOne(IMongoTemplate.fromObj(rootNode), new InsertOneOptions());
-        System.out.println(IMongoTemplate.fromObj(rootNode));
+        IMongoCollection.get("model_node").insert(rootNode);
     }
 
     public static class DefaultDomainModel extends DomainModel {
 
-        private static final MongoCollection nodeCollection = MongoUtil.getDB().getCollection("model_node", IMongoTemplate.class);
+        private static final MongoCollection<IMongoDocument> nodeCollection = MongoUtil.getCollection("model_node");
 
         @Override
         public DomainNode compute(String input, Object... params) {
             List<DomainNode> chids = new LinkedList<>();
-            nodeCollection.aggregate(Arrays.asList(Aggregates.unwind("childs"), Aggregates.lookup("model_node", "childs", "name", "childs"), Aggregates.match(Filters.eq("father", "root")))).forEach((Block<IMongoTemplate>) iMongoTemplate -> {
-                DomainNode domainNode = iMongoTemplate.getOrigin(DomainNode.class);
+            nodeCollection.aggregate(Arrays.asList(Aggregates.unwind("childs"), Aggregates.lookup("model_node", "childs", "name", "childs"), Aggregates.match(Filters.eq("father", "root")))).forEach((Block<IMongoDocument>) iMongoDocument -> {
+                DomainNode domainNode = iMongoDocument.getOrigin(DomainNode.class);
                 DomainModel model = (DomainModel) ModelLoader.load(domainNode.getName());
                 if (model == null) {
                     throw new RuntimeException("can't find domain model with name:" + domainNode.getName());
@@ -63,11 +61,13 @@ public class DemoTrainer {
     }
 
     public static void main(String[] args) {
-//        buildDefault();
+        buildDefault();
 
         CommonDomainModel newsModel = new CommonDomainModel();
-        newsModel.setFeatures(Arrays.asList("新闻","news"));
+        newsModel.setFeatures(Arrays.asList("新闻", "news"));
 
         ModelPluginer.addPlugin(newsModel, "root", "news");
+
+        Model model = ModelLoader.load("news");
     }
 }
