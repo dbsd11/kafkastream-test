@@ -57,8 +57,8 @@ public class IMongoCollection {
         MongoUtil.getTemplate().insertAll(objects.stream().map(IMongoDocument::fromObj).collect(Collectors.toList()));
     }
 
-    public ObjectId updateFirst(Query query, Update update) {
-        return MongoUtil.getTemplate().updateFirst(query, update, IMongoDocument.class).getUpsertedId().asObjectId().getValue();
+    public long updateFirst(Query query, Update update) {
+        return MongoUtil.getTemplate().updateFirst(query, update, IMongoDocument.class).getModifiedCount();
     }
 
     public long updateMulti(Query query, Update update) {

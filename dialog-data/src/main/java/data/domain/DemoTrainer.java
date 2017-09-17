@@ -66,8 +66,9 @@ public class DemoTrainer {
         CommonDomainModel newsModel = new CommonDomainModel();
         newsModel.setFeatures(Arrays.asList("新闻", "news"));
 
-        ModelPluginer.addPlugin(newsModel, "root", "news");
+        ModelPluginer.addPlugin("news", newsModel, "root");
 
         Model model = ModelLoader.load("news");
+        int i=0;
     }
 }

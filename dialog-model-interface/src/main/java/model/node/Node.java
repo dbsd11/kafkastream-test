@@ -1,8 +1,8 @@
 package model.node;
 
+import com.google.gson.annotations.SerializedName;
 import model.Model;
 
-import java.beans.Transient;
 import java.io.Serializable;
 
 /**
@@ -11,10 +11,14 @@ import java.io.Serializable;
 public interface Node extends Serializable {
     long serialVersionUID = -1L;
 
+    @SerializedName("name")
     String getName();
 
+    @SerializedName("model")
     Model getModel();
 
-    @Transient
-    Node[] relates();
+    @SerializedName("relates")
+    default Node[] relates() {
+        return new Node[0];
+    }
 }

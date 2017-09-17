@@ -5,7 +5,7 @@ package model.node;
  */
 public interface NodeManager {
 
-    Node createNode(String name, Object... params);
+    Node createNode(String name, Node node, Object... params);
 
     Node getNode(String name, Object... params);
 

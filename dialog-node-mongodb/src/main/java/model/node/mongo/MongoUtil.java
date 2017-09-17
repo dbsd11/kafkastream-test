@@ -7,6 +7,7 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.SimpleMongoDbFactory;
 import org.springframework.data.mongodb.core.convert.DefaultDbRefResolver;
 import org.springframework.data.mongodb.core.convert.MappingMongoConverter;
+import org.springframework.data.mongodb.core.convert.MongoCustomConversions;
 import org.springframework.data.mongodb.core.mapping.MongoMappingContext;
 
 import java.util.Collections;
@@ -17,6 +18,7 @@ import java.util.Collections;
 public class MongoUtil {
     private static MongoDbFactory dbFactory;
     private static MongoMappingContext mappingContext;
+    private static MappingMongoConverter mappingConverter;
     public static final MongoTemplate template;
 
     public static MongoTemplate getTemplate() {
@@ -28,10 +30,17 @@ public class MongoUtil {
     }
 
     static {
-        dbFactory = new SimpleMongoDbFactory(new MongoClientURI("mongodb://127.0.0.1:27017/dialog"));
-        mappingContext = new MongoMappingContext();
-        mappingContext.setInitialEntitySet(Collections.singleton(IMongoDocument.class));
-        mappingContext.initialize();
-        template = new MongoTemplate(dbFactory, new MappingMongoConverter(new DefaultDbRefResolver(dbFactory), mappingContext));
+        try {
+            dbFactory = new SimpleMongoDbFactory(new MongoClientURI("mongodb://127.0.0.1:27017/dialog"));
+            mappingContext = new MongoMappingContext();
+            mappingContext.setInitialEntitySet(Collections.singleton(IMongoDocument.class));
+            mappingContext.initialize();
+            mappingConverter = new MappingMongoConverter(new DefaultDbRefResolver(dbFactory), mappingContext);
+            mappingConverter.setCustomConversions(new MongoCustomConversions(Collections.singletonList(IMongoDocument.DocumentConverter.DEFAULT)));
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            template = new MongoTemplate(dbFactory, mappingConverter);
+        }
     }
 }
