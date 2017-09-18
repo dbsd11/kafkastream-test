@@ -1,5 +1,6 @@
 package util;
 
+import java.lang.reflect.ParameterizedType;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -20,7 +21,14 @@ public class BeanDelegator<T> {
         if (intanceMap == null) {
             intanceMap = new ConcurrentHashMap<>();
         }
-        intanceMap.put(delegatee.getClass(), new BeanDelegator<>(delegatee));
+        intanceMap.put((Class) ((ParameterizedType) delegatee.getClass().getGenericInterfaces()[0]).getRawType(), new BeanDelegator<>(delegatee));
+    }
+
+    public static <E> void delegate(Class<E> cls, E delegatee) {
+        if (intanceMap == null) {
+            intanceMap = new ConcurrentHashMap<>();
+        }
+        intanceMap.put(cls, new BeanDelegator<>(delegatee));
     }
 
     public static <E> E get(Class<E> delegateeClass) {

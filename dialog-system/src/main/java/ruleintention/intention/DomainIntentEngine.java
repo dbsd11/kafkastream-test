@@ -33,7 +33,7 @@ public class DomainIntentEngine {
         }
         actionDto.putProp(Constants.ACTION_TYPE, ActionType.ACT);
 
-        IntentNode[] intentions = (IntentNode[]) domain.childs();
+        IntentNode[] intentions = (IntentNode[]) domain.relates();
         IntentNode intent = null;
         double maxScore = Double.MIN_VALUE;
         for (IntentNode intentNode : intentions) {

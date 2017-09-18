@@ -43,10 +43,10 @@ public class RuleEngine {
 
         ActionDto actionDto = (ActionDto) flowDto;
         Double lastDialogTime = statistic.get(getDialogLastTimeKey(actionDto));
-        WindowStoreIterator<List<ActionData>> iterator = history.fetch(getKey(actionDto), lastDialogTime.intValue(), System.currentTimeMillis());
+        WindowStoreIterator<List<ActionData>> iterator = history.fetch(getKey(actionDto), lastDialogTime==null?0:lastDialogTime.intValue(), System.currentTimeMillis());
         AtomicInteger serialIndex = new AtomicInteger();
-        String lastIntent;
-        while (true) {
+        String lastIntent = null;
+        while (iterator.hasNext()) {
             List<ActionData> actionDataList = iterator.next().value;
             for (ActionData actionData : actionDataList) {
                 if (actionData.getResponse().getInt(Constants.ACTION_SERIALINDEX) == Constants.ACTION_START_SERIALINDEX) {
@@ -61,7 +61,7 @@ public class RuleEngine {
             }
         }
 
-        ActionType actionType = ActionType.valueOf(actionDto.getString(Constants.ACTION_TASK));
+        ActionType actionType = ActionType.valueOf(actionDto.getString(Constants.ACTION_TYPE));
         if (actionType == ActionType.UNDEFINED) {
             switch (recognizeAction(actionDto.getContent())) {
                 case ACT_NEW:

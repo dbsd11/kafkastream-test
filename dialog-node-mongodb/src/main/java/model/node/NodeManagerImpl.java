@@ -43,7 +43,7 @@ abstract class TreeNodeManager4Mongodb implements NodeManager {
         nodeDocument.putIfAbsent(NODE_NAME, node.getName());
         nodeDocument.putIfAbsent(NODE_MODEL, node.getModel().serialBytes());
         nodeDocument.putIfAbsent(NODE_FATHER, params[0]);
-        nodeDocument.putIfAbsent(NODE_CHILDS, "[]");
+        nodeDocument.putIfAbsent(NODE_CHILDS, new String[0]);
 
         IMongoDocument fatherDocument = IMongoCollection.get(NODE_COLLECTION).findOne(BasicQuery.query(Criteria.where(NODE_NAME).is(nodeDocument.get(NODE_FATHER))));
         Set<String> childs = new HashSet<>(fatherDocument.get(NODE_CHILDS) == null ? Collections.emptyList() : (List) fatherDocument.get(NODE_CHILDS));

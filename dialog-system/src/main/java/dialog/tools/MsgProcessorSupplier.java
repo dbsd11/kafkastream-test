@@ -15,8 +15,6 @@ import util.BeanDelegator;
 import util.Constants;
 
 import java.util.Base64;
-import java.util.Collections;
-import java.util.List;
 
 /**
  * Created by BSONG on 2017/8/7.
@@ -48,13 +46,14 @@ public class MsgProcessorSupplier implements ProcessorSupplier {
 
         private DialogFlowProcessor dialogFlowProcessor;
 
-        private WindowStore<String, List<ActionData>> dialogHistoryStore;
+        private WindowStore<String, ActionData> dialogHistoryStore;
         private KeyValueStore<String, Double> dialogStatisticStore;
         private ProcessorContext context;
         private MsgProcessorSupplier supplier;
 
         public DialogMsgProcessor(MsgProcessorSupplier supplier) {
             this.supplier = supplier;
+            this.dialogFlowProcessor = new DialogFlowProcessor();
         }
 
         @Override
@@ -72,7 +71,7 @@ public class MsgProcessorSupplier implements ProcessorSupplier {
             String key = getKey(dialogData);
             ActionData actionData = new ActionData();
             try {
-                actionData.setId(dialogStatisticStore.get(getDialogCountKey(dialogData)).intValue());
+                actionData.setId(dialogStatisticStore.get(getDialogCountKey(dialogData)) == null ? 0 : dialogStatisticStore.get(getDialogCountKey(dialogData)).intValue());
                 actionData.setTenantId(dialogData.getTenantId());
                 actionData.setRobotId(dialogData.getRobotId());
                 actionData.setContent(dialogData.getContent());
@@ -84,7 +83,7 @@ public class MsgProcessorSupplier implements ProcessorSupplier {
                 log.error(e.getMessage(), e);
             } finally {
                 log.info("save dialog history:{}", actionData);
-                dialogHistoryStore.put(key, Collections.singletonList(actionData));
+                dialogHistoryStore.put(key, actionData);
 
                 log.info("save dialog statistic");
                 String dialogCountKey = getDialogCountKey(dialogData);
@@ -104,10 +103,10 @@ public class MsgProcessorSupplier implements ProcessorSupplier {
         public void init(ProcessorContext context) {
             super.init(context);
             this.context = context;
-            this.dialogHistoryStore = (WindowStore<String, List<ActionData>>) this.context.getStateStore("dialogHistory");
+            this.dialogHistoryStore = (WindowStore<String, ActionData>) this.context.getStateStore("dialogHistory");
             this.dialogStatisticStore = (KeyValueStore<String, Double>) this.context.getStateStore("dialogStatistic");
-            BeanDelegator.delegate(dialogHistoryStore);
-            BeanDelegator.delegate(dialogStatisticStore);
+            BeanDelegator.delegate(WindowStore.class, dialogHistoryStore);
+            BeanDelegator.delegate(KeyValueStore.class, dialogStatisticStore);
         }
 
         @Override

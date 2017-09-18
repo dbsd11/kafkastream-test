@@ -8,11 +8,11 @@ import model.IntentionModel;
 public class MEMIntentionModel extends IntentionModel {
     @Override
     public Double compute(String input, Object... params) {
-        return null;
+        return 0d;
     }
 
     @Override
     public String getResponse(String content) {
-        return null;
+        return "";
     }
 }

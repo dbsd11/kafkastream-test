@@ -2,20 +2,20 @@ package model.node.mongo;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonDeserializer;
-import com.google.gson.JsonPrimitive;
 import com.google.gson.JsonSerializer;
 import model.Model;
 import org.springframework.core.convert.TypeDescriptor;
 import org.springframework.core.convert.converter.GenericConverter;
 import org.springframework.data.annotation.AccessType;
 import org.springframework.data.convert.ReadingConverter;
-import org.springframework.data.convert.WritingConverter;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.lang.Nullable;
 
 import java.io.ByteArrayInputStream;
 import java.io.ObjectInputStream;
+import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Set;
 
@@ -26,10 +26,20 @@ import java.util.Set;
 @AccessType(AccessType.Type.PROPERTY)
 public class IMongoDocument extends org.bson.Document {
     private static final Gson gson = new GsonBuilder().serializeNulls()
-            .registerTypeHierarchyAdapter(Model.class, (JsonSerializer<Model>) (domainModel, type, jsonSerializationContext) -> new JsonPrimitive(new String(domainModel.serialBytes())))
+            .registerTypeHierarchyAdapter(Model.class, (JsonSerializer<Model>) (domainModel, type, jsonSerializationContext) -> {
+                JsonArray byteArray = new JsonArray();
+                for (byte b : domainModel.serialBytes()) {
+                    byteArray.add(b);
+                }
+                return byteArray;
+            })
             .registerTypeHierarchyAdapter(Model.class, (JsonDeserializer<Model>) (jsonElement, type, jsonDeserializationContext) -> {
                 try {
-                    return (Model) new ObjectInputStream(new ByteArrayInputStream(jsonElement.getAsString().getBytes())).readObject();
+                    JsonArray byteArray = jsonElement.getAsJsonArray();
+                    ByteBuffer bb = ByteBuffer.allocate(byteArray.size());
+                    byteArray.forEach(b -> bb.put(b.getAsByte()));
+                    bb.flip();
+                    return (Model) new ObjectInputStream(new ByteArrayInputStream(bb.array())).readObject();
                 } catch (Exception e) {
                     return null;
                 }
@@ -45,7 +55,7 @@ public class IMongoDocument extends org.bson.Document {
     }
 
     @ReadingConverter
-    public static class DocumentConverter implements GenericConverter{
+    public static class DocumentConverter implements GenericConverter {
 
         public static final DocumentConverter DEFAULT = new DocumentConverter();
 

@@ -42,7 +42,7 @@ public class PropsWarper {
     }
 
     public String getString(String key) {
-        return (String) props.getOrDefault(key, null);
+        return String.valueOf(props.getOrDefault(key, null));
     }
 
     public Set<String> keySet() {
