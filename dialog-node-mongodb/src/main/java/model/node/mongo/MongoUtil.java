@@ -19,7 +19,7 @@ public class MongoUtil {
     private static MongoDbFactory dbFactory;
     private static MongoMappingContext mappingContext;
     private static MappingMongoConverter mappingConverter;
-    public static final MongoTemplate template;
+    private static final MongoTemplate template;
 
     public static MongoTemplate getTemplate() {
         return template;

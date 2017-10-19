@@ -23,8 +23,11 @@ public class ActionDto extends RollbackAbleFlowDto {
     @Override
     public FlowDto next() {
         DomainIntentEngine.process(this);
+
         TaskEngine.process(this);
+
         RuleEngine.process(this);
+
         return DomainIntentEngine.next(this);
     }
 }

@@ -9,6 +9,8 @@ import model.node.DomainNode;
 import model.node.IntentNode;
 import model.tool.ModelLoader;
 import ruleintention.rule.enums.ActionType;
+import ruleintention.rule.enums.TaskType;
+import task.tool.BaseFeatureTool;
 import util.Constants;
 
 /**
@@ -65,7 +67,14 @@ public class DomainIntentEngine {
     }
 
     static Object getDialogResponse(ActionDto actionDto) {
-
+        TaskType taskType = TaskType.valueOf(actionDto.getProp(Constants.TASK_TYPE).toString());
+        if (taskType == TaskType.TASK_NEW) {
+            return actionDto.getProp(Constants.TASK_RESPONSE);
+        }
+        if (taskType == TaskType.TASK) {
+            BaseFeatureTool tool = (BaseFeatureTool) actionDto.getProp(Constants.ACTION_TASK);
+            return tool.apply((String[]) actionDto.getProp(Constants.TASK_FEATURE));
+        }
         return ((IntentionModel) actionDto.getProp(Constants.ACTION_MODEL)).getResponse(actionDto.getContent());
     }
 
