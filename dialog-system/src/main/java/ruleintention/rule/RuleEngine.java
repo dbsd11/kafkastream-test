@@ -25,6 +25,7 @@ import java.util.regex.Pattern;
 public class RuleEngine {
     private static Pattern startDialogRule = Pattern.compile("您好.*|你好.*|hello|.*在吗|.*问题.*|");
     private static Pattern endDialogRule = Pattern.compile("结束.*|退出.*|end");
+    private static Pattern taskRule = Pattern.compile("请问.*|问.*|我要.*|.*\\sask\\s.*");
     private static List<String> startDialogResponse = Arrays.asList("在呢", "请说", "您好");
     private static List<String> endDialogResponse = Arrays.asList("再见", "我会想你的", "多找我聊天啊");
     private static volatile WindowStore<String, List<ActionData>> history;
@@ -43,7 +44,7 @@ public class RuleEngine {
 
         ActionDto actionDto = (ActionDto) flowDto;
         Double lastDialogTime = statistic.get(getDialogLastTimeKey(actionDto));
-        WindowStoreIterator<List<ActionData>> iterator = history.fetch(getKey(actionDto), lastDialogTime==null?0:lastDialogTime.intValue(), System.currentTimeMillis());
+        WindowStoreIterator<List<ActionData>> iterator = history.fetch(getKey(actionDto), lastDialogTime == null ? 0 : lastDialogTime.intValue(), System.currentTimeMillis());
         AtomicInteger serialIndex = new AtomicInteger();
         String lastIntent = null;
         while (iterator.hasNext()) {
@@ -80,6 +81,19 @@ public class RuleEngine {
             }
             return;
         }
+
+        TaskType taskType = TaskType.valueOf(actionDto.getString(Constants.TASK_TYPE));
+        if (taskType == TaskType.UNDEFINED) {
+            switch (recognizeTask(actionDto.getContent())) {
+                case TASK_NEW:
+                    actionDto.putProp(Constants.TASK_TYPE, TaskType.TASK_NEW);
+                    actionDto.putProp(Constants.TASK_RESPONSE, "尚不支持该任务");
+                    break;
+                default:
+                    break;
+            }
+        }
+
         if (actionDto.getString(Constants.ACTION_INTENTION).equals(lastIntent)) {
             actionDto.putProp(Constants.ACTION_SERIALINDEX, serialIndex.intValue());
         } else {
@@ -99,8 +113,10 @@ public class RuleEngine {
     }
 
     public static TaskType recognizeTask(String content) {
-
-        return null;
+        if (taskRule.matcher(content.toLowerCase()).matches()) {
+            return TaskType.TASK_NEW;
+        }
+        return TaskType.UNDEFINED;
     }
 
     static String getKey(ActionDto actionDto) {

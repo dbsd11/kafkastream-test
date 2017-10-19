@@ -11,6 +11,8 @@ public interface Constants {
     String ACTION_RESPONSE = "response";
     String ACTION_TASK = "task";
     String ACTION_MODEL = "actionModel";
+    String TASK_TYPE = "taskType";
+    String TASK_RESPONSE = "taskResponse";
 
     String ID = "id";
     String TENANT_ID = "tenantId";

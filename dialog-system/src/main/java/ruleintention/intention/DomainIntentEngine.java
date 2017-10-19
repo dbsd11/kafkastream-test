@@ -21,8 +21,9 @@ public class DomainIntentEngine {
             return;
         }
 
-        DomainModel domainModel = ModelLoader.loadDefaultDomainModel();
         ActionDto actionDto = (ActionDto) flowDto;
+
+        DomainModel domainModel = ModelLoader.loadDefaultDomainModel();
         DomainNode domain = domainModel.compute(actionDto.getContent());
         while (domain != null && !domain.isLast()) {
             domain = domain.getModel().compute(actionDto.getContent(), domain);

@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import ruleintention.intention.DomainIntentEngine;
 import ruleintention.rule.RuleEngine;
+import task.TaskEngine;
 
 /**
  * Created by BSONG on 2017/6/18.
@@ -22,6 +23,7 @@ public class ActionDto extends RollbackAbleFlowDto {
     @Override
     public FlowDto next() {
         DomainIntentEngine.process(this);
+        TaskEngine.process(this);
         RuleEngine.process(this);
         return DomainIntentEngine.next(this);
     }
