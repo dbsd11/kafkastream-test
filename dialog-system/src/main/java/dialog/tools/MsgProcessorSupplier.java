@@ -48,7 +48,6 @@ public class MsgProcessorSupplier implements ProcessorSupplier {
 
         private WindowStore<String, ActionData> dialogHistoryStore;
         private KeyValueStore<String, Double> dialogStatisticStore;
-        private ProcessorContext context;
         private MsgProcessorSupplier supplier;
 
         public DialogMsgProcessor(MsgProcessorSupplier supplier) {
@@ -75,7 +74,7 @@ public class MsgProcessorSupplier implements ProcessorSupplier {
                 actionData.setTenantId(dialogData.getTenantId());
                 actionData.setRobotId(dialogData.getRobotId());
                 actionData.setContent(dialogData.getContent());
-                actionData.setTimeStamp(context.timestamp());
+                actionData.setTimeStamp(context().timestamp());
                 //todo worker
                 ResponseData responseData = dialogFlowProcessor.process(actionData);
                 callBack(responseData);
@@ -102,9 +101,8 @@ public class MsgProcessorSupplier implements ProcessorSupplier {
         @Override
         public void init(ProcessorContext context) {
             super.init(context);
-            this.context = context;
-            this.dialogHistoryStore = (WindowStore<String, ActionData>) this.context.getStateStore("dialogHistory");
-            this.dialogStatisticStore = (KeyValueStore<String, Double>) this.context.getStateStore("dialogStatistic");
+            this.dialogHistoryStore = (WindowStore<String, ActionData>) context().getStateStore("dialogHistory");
+            this.dialogStatisticStore = (KeyValueStore<String, Double>) context().getStateStore("dialogStatistic");
             BeanDelegator.delegate(WindowStore.class, dialogHistoryStore);
             BeanDelegator.delegate(KeyValueStore.class, dialogStatisticStore);
         }
