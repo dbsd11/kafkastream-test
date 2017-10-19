@@ -6,7 +6,6 @@ import dialog.tools.JsonSerializer;
 import dialog.tools.KafkaPropertiesConfigure;
 import dialog.tools.MsgProcessorSupplier;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.clients.KafkaClient;
 import org.apache.kafka.common.serialization.DoubleDeserializer;
 import org.apache.kafka.common.serialization.DoubleSerializer;
 import org.apache.kafka.common.serialization.LongDeserializer;
@@ -21,9 +20,9 @@ import org.apache.kafka.streams.kstream.internals.KStreamWindowReduce;
 import org.apache.kafka.streams.processor.TopologyBuilder;
 import org.apache.kafka.streams.state.Stores;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by BSONG on 2017/8/7.
@@ -33,11 +32,13 @@ public class DialogListener implements Runnable {
 
     private KafkaStreams kafkaStreams;
 
+    private ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+
     @Override
     public void run() {
         Serde<DialogData> dialogDataSerde = Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(DialogData.class));
         TopologyBuilder topologyBuilder = new TopologyBuilder();
-        topologyBuilder.addSource("dialogSource", new LongDeserializer(), dialogDataSerde.deserializer(), "dialog4")
+        topologyBuilder.addSource("dialogSource", new LongDeserializer(), dialogDataSerde.deserializer(), "dialog")
                 .addProcessor("msgProcessor", new MsgProcessorSupplier(), "dialogSource")
                 .addProcessor("emptyProcessor", new MsgProcessorSupplier(true), "dialogSource")
                 .addGlobalStore(Stores.create("dialogHistory").withStringKeys().withValues(dialogDataSerde).persistent().windowed(100, 30 * 24 * 3600, 2, true).enableCaching().disableLogging().build(),
@@ -49,8 +50,15 @@ public class DialogListener implements Runnable {
                 .addSink("msgSink", "dialog_statistic_out", new StringSerializer(), new DoubleSerializer(), "statisticProcessor");
 
         this.kafkaStreams = new KafkaStreams(topologyBuilder, KafkaPropertiesConfigure.getConfig());
-        this.kafkaStreams.start();
 
         log.info("Dialog message listener started");
+
+        executor.scheduleAtFixedRate(() -> {
+            if (!kafkaStreams.state().isRunning()) {
+                kafkaStreams.close();
+                kafkaStreams = new KafkaStreams(topologyBuilder, KafkaPropertiesConfigure.getConfig());
+                kafkaStreams.start();
+            }
+        }, 0, 100, TimeUnit.MILLISECONDS);
     }
 }
