@@ -1,8 +1,8 @@
 package task;
 
-import flow.dto.ActionDto;
 import flow.dto.FlowDto;
 import flow.dto.ResultDto;
+import flow.dto.TaskDto;
 import model.node.mongo.IMongoCollection;
 import model.node.mongo.IMongoDocument;
 import org.slf4j.Logger;
@@ -49,21 +49,44 @@ public class TaskEngine {
     }
 
     public static void process(FlowDto flowDto) {
-        if (flowDto instanceof ResultDto) {
-            return;
-        }
+        TaskDto taskDto = (TaskDto) flowDto;
 
-        ActionDto actionDto = (ActionDto) flowDto;
-
-        toolList.stream().anyMatch(tool -> {
-            String[] features = tool.getModel().compute(actionDto.getContent());
+        boolean matchTaskType = toolList.stream().anyMatch(tool -> {
+            String[] features = tool.getModel().compute(taskDto.getContent());
             if (features != null) {
-                actionDto.putProp(Constants.TASK_TYPE, TaskType.TASK);
-                actionDto.putProp(Constants.ACTION_TASK, tool);
-                actionDto.putProp(Constants.TASK_FEATURE, features);
+                taskDto.putProp(Constants.TASK_TYPE, TaskType.TASK);
+                taskDto.putProp(Constants.ACTION_TASK, tool);
+                taskDto.putProp(Constants.TASK_FEATURE, features);
                 return true;
             }
             return false;
         });
+
+        if (!matchTaskType) {
+            taskDto.putProp(Constants.TASK_TYPE, TaskType.UNDEFINED);
+        }
+    }
+
+    public static FlowDto next(FlowDto flowDto) {
+        TaskDto taskDto = (TaskDto) flowDto;
+
+        TaskType taskType = TaskType.valueOf(taskDto.getProp(Constants.TASK_TYPE).toString());
+        if (taskType == TaskType.UNDEFINED) {
+            return null;
+        }
+        if (taskType == TaskType.TASK_NEW) {
+            return buildResult(taskDto, taskDto.getProp(Constants.TASK_RESPONSE));
+        }
+        if (taskType == TaskType.TASK) {
+            BaseFeatureTool tool = (BaseFeatureTool) taskDto.getProp(Constants.ACTION_TASK);
+            Object response = tool.apply((String[]) taskDto.getProp(Constants.TASK_FEATURE));
+            return buildResult(taskDto, response);
+        }
+        return null;
+    }
+
+    static ResultDto buildResult(TaskDto taskDto, Object response) {
+
+        return (ResultDto) ResultDto.builder().response(response).build().props(taskDto.getProps());
     }
 }

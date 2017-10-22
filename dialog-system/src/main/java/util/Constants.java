@@ -10,6 +10,7 @@ public interface Constants {
     String ACTION_SERIALINDEX = "serialIndex";
     String ACTION_RESPONSE = "response";
     String ACTION_MODEL = "actionModel";
+    String ACTION_STATE="state";
 
     String ACTION_TASK = "task";
 

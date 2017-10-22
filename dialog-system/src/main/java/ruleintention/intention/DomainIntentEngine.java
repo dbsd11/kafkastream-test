@@ -3,14 +3,14 @@ package ruleintention.intention;
 import flow.dto.ActionDto;
 import flow.dto.FlowDto;
 import flow.dto.ResultDto;
+import flow.dto.TaskDto;
 import model.DomainModel;
 import model.IntentionModel;
 import model.node.DomainNode;
 import model.node.IntentNode;
 import model.tool.ModelLoader;
+import org.apache.commons.lang3.StringUtils;
 import ruleintention.rule.enums.ActionType;
-import ruleintention.rule.enums.TaskType;
-import task.tool.BaseFeatureTool;
 import util.Constants;
 
 /**
@@ -19,10 +19,6 @@ import util.Constants;
 public class DomainIntentEngine {
 
     public static void process(FlowDto flowDto) {
-        if (flowDto instanceof ResultDto) {
-            return;
-        }
-
         ActionDto actionDto = (ActionDto) flowDto;
 
         DomainModel domainModel = ModelLoader.loadDefaultDomainModel();
@@ -34,11 +30,10 @@ public class DomainIntentEngine {
             actionDto.putProp(Constants.ACTION_TYPE, ActionType.UNDEFINED);
             return;
         }
-        actionDto.putProp(Constants.ACTION_TYPE, ActionType.ACT);
 
         IntentNode[] intentions = (IntentNode[]) domain.relates();
         IntentNode intent = null;
-        double maxScore = Double.MIN_VALUE;
+        double maxScore = 0;
         for (IntentNode intentNode : intentions) {
             double score = intentNode.getModel().compute(actionDto.getContent());
             if (score > maxScore) {
@@ -46,16 +41,16 @@ public class DomainIntentEngine {
                 intent = intentNode;
             }
         }
-        actionDto.putProp(Constants.ACTION_INTENTION, intent.getName());
-        actionDto.putProp(Constants.ACTION_MODEL, intent.getModel());
+        if (maxScore != 0) {
+            actionDto.putProp(Constants.ACTION_TYPE, ActionType.ACT);
+            actionDto.putProp(Constants.ACTION_INTENTION, intent.getName());
+            actionDto.putProp(Constants.ACTION_MODEL, intent.getModel());
+        }
     }
 
     public static FlowDto next(FlowDto flowDto) {
-        if (flowDto instanceof ResultDto) {
-            return null;
-        }
-
         ActionDto actionDto = (ActionDto) flowDto;
+
         ActionType actionType = ActionType.valueOf(actionDto.getString(Constants.ACTION_TYPE));
         if (actionType == ActionType.UNDEFINED) {
             return null;
@@ -63,23 +58,21 @@ public class DomainIntentEngine {
         if (actionType == ActionType.ACT_NEW || actionType == ActionType.ACT_OUT) {
             return buildResult(actionDto, actionDto.getString(Constants.ACTION_RESPONSE));
         }
-        return buildResult(actionDto, getDialogResponse(actionDto));
+        if (actionType == ActionType.FREECHAT) {
+            return buildResult(actionDto, "您吃饭了吗，来聊会儿天");
+        }
+        if (actionType == ActionType.ACT) {
+            Object response = ((IntentionModel) actionDto.getProp(Constants.ACTION_MODEL)).getResponse(actionDto.getContent());
+            if (response != null && !StringUtils.isEmpty(response.toString())) {
+                return buildResult(actionDto, response);
+            }
+            return TaskDto.builder().timeStamp(actionDto.getTimeStamp()).state(-1).content(actionDto.getContent()).build();
+        }
+        return null;
     }
 
-    static Object getDialogResponse(ActionDto actionDto) {
-        TaskType taskType = TaskType.valueOf(actionDto.getProp(Constants.TASK_TYPE).toString());
-        if (taskType == TaskType.TASK_NEW) {
-            return actionDto.getProp(Constants.TASK_RESPONSE);
-        }
-        if (taskType == TaskType.TASK) {
-            BaseFeatureTool tool = (BaseFeatureTool) actionDto.getProp(Constants.ACTION_TASK);
-            return tool.apply((String[]) actionDto.getProp(Constants.TASK_FEATURE));
-        }
-        return ((IntentionModel) actionDto.getProp(Constants.ACTION_MODEL)).getResponse(actionDto.getContent());
-    }
+    static ResultDto buildResult(ActionDto actionDto, Object response) {
 
-    static ResultDto buildResult(ActionDto actionDto, Object Response) {
-
-        return (ResultDto) ResultDto.builder().response(Response).build().props(actionDto.getProps()).props(actionDto.getProps());
+        return (ResultDto) ResultDto.builder().response(response).build().props(actionDto.getProps());
     }
 }

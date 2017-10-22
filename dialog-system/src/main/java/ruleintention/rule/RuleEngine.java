@@ -3,7 +3,7 @@ package ruleintention.rule;
 import data.ActionData;
 import flow.dto.ActionDto;
 import flow.dto.FlowDto;
-import flow.dto.ResultDto;
+import flow.dto.TaskDto;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.WindowStore;
 import org.apache.kafka.streams.state.WindowStoreIterator;
@@ -32,9 +32,6 @@ public class RuleEngine {
     private static volatile KeyValueStore<String, Double> statistic;
 
     public static void process(FlowDto flowDto) {
-        if (flowDto instanceof ResultDto) {
-            return;
-        }
         if (history == null) {
             history = BeanDelegator.get(WindowStore.class);
         }
@@ -42,63 +39,68 @@ public class RuleEngine {
             statistic = BeanDelegator.get(KeyValueStore.class);
         }
 
-        ActionDto actionDto = (ActionDto) flowDto;
-        Double lastDialogTime = statistic.get(getDialogLastTimeKey(actionDto));
-        WindowStoreIterator<List<ActionData>> iterator = history.fetch(getKey(actionDto), lastDialogTime == null ? 0 : lastDialogTime.intValue(), System.currentTimeMillis());
-        AtomicInteger serialIndex = new AtomicInteger();
-        String lastIntent = null;
-        while (iterator.hasNext()) {
-            List<ActionData> actionDataList = iterator.next().value;
-            for (ActionData actionData : actionDataList) {
-                if (actionData.getResponse().getInt(Constants.ACTION_SERIALINDEX) == Constants.ACTION_START_SERIALINDEX) {
-                    serialIndex.set(Constants.ACTION_START_SERIALINDEX);
-                } else {
-                    serialIndex.incrementAndGet();
+        if (flowDto instanceof ActionDto) {
+            ActionDto actionDto = (ActionDto) flowDto;
+            Double lastDialogTime = statistic.get(getDialogLastTimeKey(actionDto));
+            WindowStoreIterator<List<ActionData>> iterator = history.fetch(getKey(actionDto), lastDialogTime == null ? 0 : lastDialogTime.intValue(), System.currentTimeMillis());
+            AtomicInteger serialIndex = new AtomicInteger();
+            String lastIntent = null;
+            while (iterator.hasNext()) {
+                List<ActionData> actionDataList = iterator.next().value;
+                for (ActionData actionData : actionDataList) {
+                    if (actionData.getResponse().getInt(Constants.ACTION_SERIALINDEX) == Constants.ACTION_START_SERIALINDEX) {
+                        serialIndex.set(Constants.ACTION_START_SERIALINDEX);
+                    } else {
+                        serialIndex.incrementAndGet();
+                    }
+                }
+                if (!iterator.hasNext() && actionDataList.size() != 0) {
+                    lastIntent = actionDataList.get(actionDataList.size() - 1).getResponse().getString(Constants.ACTION_INTENTION);
+                    break;
                 }
             }
-            if (!iterator.hasNext() && actionDataList.size() != 0) {
-                lastIntent = actionDataList.get(actionDataList.size() - 1).getResponse().getString(Constants.ACTION_INTENTION);
-                break;
+
+            ActionType actionType = ActionType.valueOf(actionDto.getString(Constants.ACTION_TYPE));
+            if (actionType == ActionType.UNDEFINED) {
+                switch (recognizeAction(actionDto.getContent())) {
+                    case ACT_NEW:
+                        actionDto.putProp(Constants.ACTION_TYPE, ActionType.ACT_NEW);
+                        actionDto.putProp(Constants.ACTION_SERIALINDEX, Constants.ACTION_START_SERIALINDEX);
+                        actionDto.putProp(Constants.ACTION_RESPONSE, startDialogResponse.get(Double.valueOf(Math.random() * startDialogResponse.size()).intValue()));
+                        break;
+                    case ACT_OUT:
+                        actionDto.putProp(Constants.ACTION_TYPE, ActionType.ACT_OUT);
+                        actionDto.putProp(Constants.ACTION_SERIALINDEX, serialIndex.intValue());
+                        actionDto.putProp(Constants.ACTION_RESPONSE, endDialogResponse.get(Double.valueOf(Math.random() * endDialogResponse.size()).intValue()));
+                        break;
+                    default:
+                        actionDto.putProp(Constants.ACTION_SERIALINDEX, -1);
+                        break;
+                }
+                return;
+            }
+
+            if (actionDto.getString(Constants.ACTION_INTENTION).equals(lastIntent)) {
+                actionDto.putProp(Constants.ACTION_SERIALINDEX, serialIndex.intValue());
+            } else {
+                //todo 跳出之前意图进入新意图对话check
+                actionDto.putProp(Constants.ACTION_SERIALINDEX, Constants.ACTION_START_SERIALINDEX);
             }
         }
 
-        ActionType actionType = ActionType.valueOf(actionDto.getString(Constants.ACTION_TYPE));
-        if (actionType == ActionType.UNDEFINED) {
-            switch (recognizeAction(actionDto.getContent())) {
-                case ACT_NEW:
-                    actionDto.putProp(Constants.ACTION_TYPE, ActionType.ACT_NEW);
-                    actionDto.putProp(Constants.ACTION_SERIALINDEX, Constants.ACTION_START_SERIALINDEX);
-                    actionDto.putProp(Constants.ACTION_RESPONSE, startDialogResponse.get(Double.valueOf(Math.random() * startDialogResponse.size()).intValue()));
-                    break;
-                case ACT_OUT:
-                    actionDto.putProp(Constants.ACTION_TYPE, ActionType.ACT_OUT);
-                    actionDto.putProp(Constants.ACTION_SERIALINDEX, serialIndex.intValue());
-                    actionDto.putProp(Constants.ACTION_RESPONSE, endDialogResponse.get(Double.valueOf(Math.random() * endDialogResponse.size()).intValue()));
-                    break;
-                default:
-                    actionDto.putProp(Constants.ACTION_SERIALINDEX, -1);
-                    break;
+        if (flowDto instanceof TaskDto) {
+            TaskDto taskDto = (TaskDto) flowDto;
+            TaskType taskType = TaskType.valueOf(taskDto.getString(Constants.TASK_TYPE));
+            if (taskType == TaskType.UNDEFINED) {
+                switch (recognizeTask(taskDto.getContent())) {
+                    case TASK_NEW:
+                        taskDto.putProp(Constants.TASK_TYPE, TaskType.TASK_NEW);
+                        taskDto.putProp(Constants.TASK_RESPONSE, "尚不支持该类型任务");
+                        break;
+                    default:
+                        break;
+                }
             }
-            return;
-        }
-
-        TaskType taskType = TaskType.valueOf(actionDto.getString(Constants.TASK_TYPE));
-        if (taskType == TaskType.UNDEFINED) {
-            switch (recognizeTask(actionDto.getContent())) {
-                case TASK_NEW:
-                    actionDto.putProp(Constants.TASK_TYPE, TaskType.TASK_NEW);
-                    actionDto.putProp(Constants.TASK_RESPONSE, "尚不支持该任务");
-                    break;
-                default:
-                    break;
-            }
-        }
-
-        if (actionDto.getString(Constants.ACTION_INTENTION).equals(lastIntent)) {
-            actionDto.putProp(Constants.ACTION_SERIALINDEX, serialIndex.intValue());
-        } else {
-            //todo 跳出之前意图进入新意图对话check
-            actionDto.putProp(Constants.ACTION_SERIALINDEX, Constants.ACTION_START_SERIALINDEX);
         }
     }
 
