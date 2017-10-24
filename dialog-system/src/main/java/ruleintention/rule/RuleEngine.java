@@ -44,7 +44,7 @@ public class RuleEngine {
 
         ActionDto actionDto = (ActionDto) flowDto;
         Double lastDialogTime = statistic.get(getDialogLastTimeKey(actionDto));
-        WindowStoreIterator<List<ActionData>> iterator = history.fetch(getKey(actionDto), lastDialogTime == null ? 0 : lastDialogTime.intValue(), System.currentTimeMillis());
+        WindowStoreIterator<List<ActionData>> iterator = history.fetch(getKey(actionDto), lastDialogTime == null ? 0 : lastDialogTime.longValue(), System.currentTimeMillis());
         AtomicInteger serialIndex = new AtomicInteger();
         String lastIntent = null;
         while (iterator.hasNext()) {

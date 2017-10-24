@@ -57,7 +57,7 @@ abstract class TreeNodeManager4Mongodb implements NodeManager {
 
     @Override
     public Node getNode(String name, Object... params) {
-        List<IMongoDocument> documentList = IMongoCollection.get(NODE_COLLECTION).aggregate(Aggregation.lookup(NODE_COLLECTION, NODE_CHILDS, NODE_NAME, NODE_CHILDS), Aggregation.match(Criteria.where(NODE_NAME).is(name)));
+        List<IMongoDocument> documentList = IMongoCollection.get(NODE_COLLECTION).aggregate(Aggregation.unwind(NODE_CHILDS), Aggregation.lookup(NODE_COLLECTION, NODE_CHILDS, NODE_NAME, NODE_CHILDS), Aggregation.match(Criteria.where(NODE_NAME).is(name)));
         if (CollectionUtils.isEmpty(documentList)) {
             return null;
         }

@@ -2,8 +2,8 @@ package model.node.mongo;
 
 import org.apache.commons.lang3.StringUtils;
 import org.bson.types.ObjectId;
+import org.springframework.data.mongodb.core.aggregation.Aggregation;
 import org.springframework.data.mongodb.core.aggregation.AggregationOperation;
-import org.springframework.data.mongodb.core.aggregation.TypedAggregation;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.util.CollectionUtils;
@@ -73,7 +73,7 @@ public class IMongoCollection {
         return MongoUtil.getTemplate().remove(query, IMongoDocument.class).getDeletedCount();
     }
 
-    public List<IMongoDocument> aggregate(AggregationOperation ... operations ){
-        return MongoUtil.getTemplate().aggregate(new TypedAggregation(IMongoDocument.class, operations), IMongoDocument.class).getMappedResults();
+    public List<IMongoDocument> aggregate(AggregationOperation... operations) {
+        return MongoUtil.getTemplate().aggregateAndReturn(IMongoDocument.class).inCollection(name).by(Aggregation.newAggregation(operations)).all().getMappedResults();
     }
 }
