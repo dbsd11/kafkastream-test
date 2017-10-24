@@ -9,7 +9,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class BeanDelegator<T> {
 
-    private static volatile Map<Class, BeanDelegator<?>> intanceMap;
+    private static volatile Map<String, BeanDelegator<?>> intanceMap;
 
     private T delegatee;
 
@@ -18,20 +18,25 @@ public class BeanDelegator<T> {
     }
 
     public static <E> void delegate(E delegatee) {
-        if (intanceMap == null) {
-            intanceMap = new ConcurrentHashMap<>();
-        }
-        intanceMap.put((Class) ((ParameterizedType) delegatee.getClass().getGenericInterfaces()[0]).getRawType(), new BeanDelegator<>(delegatee));
+        delegate((Class) ((ParameterizedType) delegatee.getClass().getGenericInterfaces()[0]).getRawType(), delegatee);
     }
 
     public static <E> void delegate(Class<E> cls, E delegatee) {
+        delegate(cls.getTypeName(), delegatee);
+    }
+
+    public static <E> void delegate(String name, E delegatee) {
         if (intanceMap == null) {
             intanceMap = new ConcurrentHashMap<>();
         }
-        intanceMap.put(cls, new BeanDelegator<>(delegatee));
+        intanceMap.put(name, new BeanDelegator<>(delegatee));
     }
 
     public static <E> E get(Class<E> delegateeClass) {
-        return ((BeanDelegator<E>) intanceMap.get(delegateeClass)).delegatee;
+        return get(delegateeClass.getTypeName());
+    }
+
+    public static <E> E get(String name) {
+        return ((BeanDelegator<E>) intanceMap.get(name)).delegatee;
     }
 }

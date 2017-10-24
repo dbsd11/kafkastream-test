@@ -119,17 +119,17 @@ public class MsgProcessorSupplier implements ProcessorSupplier {
 
         String getKey(DialogData dialogData) {
 
-            return String.valueOf(Base64.getEncoder().encode(String.join("_", String.valueOf(dialogData.getTenantId()), dialogData.getRobotId()).getBytes()));
+            return new String(Base64.getEncoder().encode(String.join("_", String.valueOf(dialogData.getTenantId()), dialogData.getRobotId()).getBytes()));
         }
 
         String getDialogCountKey(DialogData dialogData) {
 
-            return String.valueOf(Base64.getEncoder().encode(String.join("_", String.valueOf(dialogData.getTenantId()), dialogData.getRobotId(), "dialogcount").getBytes()));
+            return new String(Base64.getEncoder().encode(String.join("_", String.valueOf(dialogData.getTenantId()), dialogData.getRobotId(), "dialogcount").getBytes()));
         }
 
         String getDialogLastTimeKey(DialogData dialogData) {
 
-            return String.valueOf(Base64.getEncoder().encode(String.join("_", String.valueOf(dialogData.getTenantId()), dialogData.getRobotId(), "dialoglasttime").getBytes()));
+            return new String(Base64.getEncoder().encode(String.join("_", String.valueOf(dialogData.getTenantId()), dialogData.getRobotId(), "dialoglasttime").getBytes()));
         }
     }
 }
